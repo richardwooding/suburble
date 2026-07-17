@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-NB62JPNJ');</script>
+<!-- End Google Tag Manager -->
+<title>Suburble — the daily Cape Town suburb puzzle</title>
+<meta name="description" content="Guess the Cape Town suburb from its silhouette. A new puzzle every day: six guesses, distance and direction hints, 778 suburbs from the City's open data.">
+<meta property="og:site_name" content="Richard Wooding">
+<meta property="og:image" content="https://richardwooding.github.io/suburble/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Suburble — the daily Cape Town suburb puzzle">
+<meta name="twitter:title" content="Suburble — the daily Cape Town suburb puzzle">
+<meta name="twitter:description" content="Guess the Cape Town suburb from its silhouette — six guesses, distance and direction hints, a new puzzle daily.">
+<meta name="twitter:image" content="https://richardwooding.github.io/suburble/og.png">
+<link rel="canonical" href="https://richardwooding.github.io/suburble/">
+<meta name="theme-color" content="#0d1117">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230d1117'/%3E%3Cpath d='M5 14l3-6 4 3 3-5 4 4-2 6-5-2-3 3z' fill='%23a371f7'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Suburble — the daily Cape Town suburb puzzle">
+<meta property="og:description" content="Guess the Cape Town suburb from its silhouette — six guesses, distance and direction hints, a new puzzle daily.">
+<meta property="og:url" content="https://richardwooding.github.io/suburble/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="gloam.css">
+<script>try{var t=localStorage.getItem("gl-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<style>
+  /* page-local: game components on gloam tokens */
+  .game-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 22px; margin-top: 26px; }
+  @media (max-width: 720px) { .game-grid { grid-template-columns: 1fr; } }
+
+  .shape-panel {
+    background: var(--gl-panel); border: 1px solid var(--gl-border);
+    border-radius: 14px; padding: 18px; display: flex; align-items: center; justify-content: center;
+  }
+  .shape-panel svg { width: 100%; max-width: 340px; aspect-ratio: 1; }
+  .shape { fill: color-mix(in srgb, var(--gl-accent) 30%, transparent); stroke: var(--gl-accent); stroke-width: 1; }
+  .shape.solved { fill: color-mix(in srgb, var(--gl-accent) 65%, transparent); }
+
+  .guess-row {
+    display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; align-items: center;
+    background: var(--gl-panel); border: 1px solid var(--gl-border); border-radius: 10px;
+    padding: 9px 14px; margin-bottom: 8px; min-height: 22px;
+    font-family: var(--gl-mono); font-size: .92rem;
+  }
+  .g-empty { color: var(--gl-faint); }
+  .g-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .g-win { color: var(--gl-accent); font-weight: 700; }
+  .g-dist { color: var(--gl-muted); }
+  .g-prox { letter-spacing: 1px; }
+
+  #guess-form { position: relative; margin-top: 4px; }
+  #guess-input {
+    width: 100%; box-sizing: border-box; background: var(--gl-panel-2);
+    border: 1px solid var(--gl-border); border-radius: 10px; color: var(--gl-fg);
+    font: inherit; padding: 12px 14px; outline: none;
+  }
+  #guess-input:focus-visible { border-color: var(--gl-accent); }
+  #suggestions {
+    position: absolute; left: 0; right: 0; top: 100%; z-index: 5; margin: 4px 0 0; padding: 4px;
+    list-style: none; background: var(--gl-panel); border: 1px solid var(--gl-border);
+    border-radius: 10px; max-height: 260px; overflow-y: auto;
+  }
+  #suggestions li { padding: 8px 12px; border-radius: 7px; cursor: pointer; }
+  #suggestions li:hover, #suggestions li.active { background: color-mix(in srgb, var(--gl-accent) 18%, transparent); }
+
+  #result { margin-top: 10px; text-align: center; }
+  #result-name { font-size: 1.5rem; font-weight: 800; color: var(--gl-accent); }
+  #result-meta { color: var(--gl-muted); margin-top: 2px; }
+  #result-verdict { margin-top: 6px; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; }
+  .stats-grid .gl-card { text-align: center; padding: 12px; }
+  .stats-grid .gl-stat { font-size: 1.5rem; }
+</style>
+</head>
+<body class="gl">
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NB62JPNJ"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+<a class="gl-skip" href="#main">Skip to content</a>
+
+<header class="gl-nav">
+  <div class="gl-wrap">
+    <span class="gl-brand">
+      <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
+        <rect width="24" height="24" rx="6" fill="var(--gl-panel-2)"/>
+        <path d="M5 14l3-6 4 3 3-5 4 4-2 6-5-2-3 3z" fill="var(--gl-accent)"/>
+      </svg>
+      suburble <span class="gl-hint" id="day-no" style="margin-left:6px"></span>
+    </span>
+    <button class="gl-nav-toggle" aria-label="Toggle navigation" data-gl-nav-toggle="nav" aria-expanded="false">☰</button>
+    <nav id="nav">
+      <a href="#how">How to play</a>
+      <button class="gl-theme-toggle" data-gl-theme-toggle aria-label="Toggle color theme" aria-pressed="true">
+        <svg class="gl-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="gl-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+      </button>
+      <a class="gl-btn ghost" href="https://github.com/richardwooding/suburble">GitHub ★</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<section class="gl-section" style="padding-top:34px">
+  <div class="gl-wrap" style="max-width:860px">
+    <p class="gl-eyebrow">daily puzzle · cape town · open data</p>
+    <h1 style="margin-bottom:0">Which suburb is <span class="gl-grad">this?</span></h1>
+
+    <div class="game-grid">
+      <div class="shape-panel">
+        <svg id="shape" viewBox="-2 -2 104 104" role="img" aria-label="Mystery suburb silhouette"></svg>
+      </div>
+      <div>
+        <div id="guesses" aria-live="polite"></div>
+        <form id="guess-form" autocomplete="off" onsubmit="return false">
+          <input id="guess-input" type="text" placeholder="type a suburb…" aria-label="Guess a suburb"
+                 role="combobox" aria-expanded="false" aria-controls="suggestions">
+          <ul id="suggestions" hidden role="listbox"></ul>
+        </form>
+        <div id="result" hidden>
+          <div id="result-name"></div>
+          <div id="result-meta"></div>
+          <div id="result-verdict"></div>
+          <div class="gl-cta" style="justify-content:center;margin-top:14px">
+            <button class="gl-btn primary" id="share">share</button>
+          </div>
+        </div>
+        <div id="stats" hidden>
+          <div class="stats-grid">
+            <div class="gl-card"><div class="gl-stat" id="stat-played">0</div><p>played</p></div>
+            <div class="gl-card"><div class="gl-stat" id="stat-winpct">–</div><p>win rate</p></div>
+            <div class="gl-card"><div class="gl-stat" id="stat-streak">0</div><p>streak</p></div>
+            <div class="gl-card"><div class="gl-stat" id="stat-max">0</div><p>best streak</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how" class="gl-section" style="padding-top:10px">
+  <div class="gl-wrap" style="max-width:860px">
+    <p class="gl-eyebrow">how to play</p>
+    <h2>Six guesses. One suburb.</h2>
+    <p class="gl-lede">Every day at midnight (SAST) a new Cape Town suburb silhouette appears — one of 778 official suburbs from the City's open data. Each wrong guess tells you how far away you are, which direction to look (the arrow points from your guess toward the answer), and how warm you're getting. Solve it and share your grid.</p>
+    <p class="gl-hint" style="margin-top:14px">Data: <a href="https://odp-cctegis.opendata.arcgis.com/">City of Cape Town Open Data Portal</a> (Official Planning Suburbs). Distances are between suburb centroids.</p>
+  </div>
+</section>
+</main>
+
+<footer class="gl-footer">
+  <div class="gl-wrap">
+    <span class="gl-brand" style="font-size:.98rem">suburble · MIT · <span data-gl-year></span></span>
+    <nav class="gl-fnav">
+      <a href="https://github.com/richardwooding/suburble">GitHub</a>
+      <a href="https://odp-cctegis.opendata.arcgis.com/">Data source</a>
+      <a href="https://richardwooding.github.io/">All projects</a>
+    </nav>
+  </div>
+</footer>
+<script src="gloam.js" defer></script>
+<script src="game.js" defer></script>
+</body>
+</html>
