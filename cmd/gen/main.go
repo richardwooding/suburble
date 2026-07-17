@@ -109,9 +109,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	enc := json.NewEncoder(f)
-	if err := enc.Encode(out); err != nil {
+	if err := json.NewEncoder(f).Encode(out); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
 		return err
 	}
 	fmt.Fprintf(os.Stderr, "wrote %d suburbs\n", len(suburbs))
