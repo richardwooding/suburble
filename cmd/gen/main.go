@@ -32,9 +32,9 @@ const (
 
 // Suburb is one entry in the generated dataset.
 type Suburb struct {
-	Name   string        `json:"name"`
-	Center [2]float64    `json:"c"` // lon, lat
-	AreaKm float64       `json:"km2"`
+	Name   string         `json:"name"`
+	Center [2]float64     `json:"c"` // lon, lat
+	AreaKm float64        `json:"km2"`
 	Rings  [][][2]float64 `json:"rings"` // normalized to frameSize x frameSize
 }
 
