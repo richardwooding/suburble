@@ -7,10 +7,10 @@
   var EPOCH = "2026-07-17"; // launch day = puzzle #1
   var TZ = "Africa/Johannesburg";
 
+  var data = null;    // suburbs.json
+  var mode = "normal"; // "normal" (curated answers) | "hard" (all suburbs)
   var state = { day: 0, guesses: [], done: false, won: false };
-  var data = null; // suburbs.json
   var answer = null;
-  var eligible = []; // indices eligible as answers
 
   // --- daily selection ---------------------------------------------------
 
@@ -43,6 +43,23 @@
     return idx;
   }
 
+  // answerPool returns the suburb indices eligible as answers for a mode.
+  function answerPool(m) {
+    var pool = [];
+    data.suburbs.forEach(function (s, i) {
+      if (s.name.indexOf("CAPE FARMS") === 0) return; // guessable, never the answer
+      if (m === "normal" && !s.known) return;
+      pool.push(i);
+    });
+    return pool;
+  }
+
+  function todaysAnswer(m, day) {
+    var pool = answerPool(m);
+    var order = shuffled(pool.length, m === "hard" ? 0x5b3b1e : 0x50f7);
+    return pool[order[day % pool.length]];
+  }
+
   // --- geometry ----------------------------------------------------------
 
   function haversineKm(a, b) {
@@ -66,7 +83,7 @@
 
   // --- display helpers ---------------------------------------------------
 
-  var SMALL_WORDS = { DE: "de", DER: "der", VAN: "van", DIE: "die", "N": "'n" };
+  var SMALL_WORDS = { DE: "de", DER: "der", VAN: "van", DIE: "die" };
   function displayName(raw) {
     return raw.split(" ").map(function (w, i) {
       if (i > 0 && SMALL_WORDS[w]) return SMALL_WORDS[w];
@@ -86,22 +103,25 @@
     return s;
   }
 
-  // --- storage -----------------------------------------------------------
+  // --- storage (all keys are per-mode) ------------------------------------
+
+  function stateKey() { return "suburble-state-" + mode; }
+  function statsKey() { return "suburble-stats-" + mode; }
 
   function loadState(day) {
     try {
-      var s = JSON.parse(localStorage.getItem("suburble-state"));
+      var s = JSON.parse(localStorage.getItem(stateKey()));
       if (s && s.day === day) return s;
     } catch (e) { /* fresh */ }
     return { day: day, guesses: [], done: false, won: false };
   }
 
   function saveState() {
-    try { localStorage.setItem("suburble-state", JSON.stringify(state)); } catch (e) { /* private mode */ }
+    try { localStorage.setItem(stateKey(), JSON.stringify(state)); } catch (e) { /* private mode */ }
   }
 
   function loadStats() {
-    try { return JSON.parse(localStorage.getItem("suburble-stats")) || {}; } catch (e) { return {}; }
+    try { return JSON.parse(localStorage.getItem(statsKey())) || {}; } catch (e) { return {}; }
   }
 
   function recordResult(won, guesses) {
@@ -114,7 +134,7 @@
     else st.streak = won ? 1 : 0;
     if (won) st.lastWinDay = state.day;
     st.maxStreak = Math.max(st.maxStreak || 0, st.streak || 0);
-    try { localStorage.setItem("suburble-stats", JSON.stringify(st)); } catch (e) { /* ok */ }
+    try { localStorage.setItem(statsKey(), JSON.stringify(st)); } catch (e) { /* ok */ }
   }
 
   // --- dom ---------------------------------------------------------------
@@ -153,6 +173,28 @@
       }
       box.appendChild(row);
     }
+    renderHint();
+  }
+
+  // renderHint reveals a little more after the 3rd and 4th misses.
+  function renderHint() {
+    var el = $("hint");
+    var misses = state.guesses.filter(function (g) { return g.idx !== state.answerIdx; }).length;
+    if (state.done || misses < 3) { el.hidden = true; return; }
+    var hints = ["area: " + answer.km2 + " km²"];
+    if (misses >= 4) hints.push("starts with “" + displayName(answer.name).charAt(0) + "”");
+    el.hidden = false;
+    el.textContent = "hint — " + hints.join(" · ");
+  }
+
+  function showResult(verdict) {
+    $("guess-form").hidden = true;
+    renderSilhouette(answer, true);
+    $("result").hidden = false;
+    $("result-name").textContent = displayName(answer.name);
+    $("result-meta").textContent = answer.km2 + " km² · puzzle #" + (state.day + 1) + (mode === "hard" ? " · hard" : "");
+    $("result-verdict").textContent = verdict;
+    renderStats();
   }
 
   function finish(won) {
@@ -160,16 +202,10 @@
     state.won = won;
     saveState();
     recordResult(won, state.guesses.length);
-    renderSilhouette(answer, true);
-    $("guess-form").hidden = true;
-    var res = $("result");
-    res.hidden = false;
-    $("result-name").textContent = displayName(answer.name);
-    $("result-meta").textContent = answer.km2 + " km² · puzzle #" + (state.day + 1);
-    $("result-verdict").textContent = won
+    renderHint();
+    showResult(won
       ? ["Legend!", "Lekker!", "Sharp sharp!", "Nice one!", "Got there!", "Phew!"][state.guesses.length - 1]
-      : "Next time!";
-    renderStats();
+      : "Next time!");
   }
 
   function renderStats() {
@@ -182,7 +218,8 @@
   }
 
   function shareText() {
-    var lines = ["Suburble #" + (state.day + 1) + " " + (state.won ? state.guesses.length : "X") + "/" + MAX_GUESSES];
+    var tag = mode === "hard" ? " (hard)" : "";
+    var lines = ["Suburble #" + (state.day + 1) + tag + " " + (state.won ? state.guesses.length : "X") + "/" + MAX_GUESSES];
     state.guesses.forEach(function (g) {
       lines.push(proximitySquares(g.km) + (g.idx === state.answerIdx ? "🎯" : g.arrow));
     });
@@ -206,13 +243,12 @@
       var guessed = {};
       state.guesses.forEach(function (g) { guessed[g.idx] = true; });
       shown = names.filter(function (n) { return !guessed[n.i] && n.u.indexOf(needle) >= 0; }).slice(0, 8);
-      // startsWith matches first
       shown.sort(function (a, b) {
         var as = a.u.indexOf(needle) === 0 ? 0 : 1, bs = b.u.indexOf(needle) === 0 ? 0 : 1;
         return as - bs || a.u.localeCompare(b.u);
       });
       list.innerHTML = "";
-      shown.forEach(function (n, i) {
+      shown.forEach(function (n) {
         var li = document.createElement("li");
         li.textContent = n.d;
         li.setAttribute("role", "option");
@@ -243,7 +279,6 @@
       else if (e.key === "Enter") {
         e.preventDefault();
         if (active >= 0) pick(shown[active].i);
-        else if (shown.length === 1) pick(shown[0].i);
         else if (shown.length > 0) pick(shown[0].i);
       } else if (e.key === "Escape") hide();
     });
@@ -262,47 +297,45 @@
     else if (state.guesses.length >= MAX_GUESSES) finish(false);
   }
 
-  // --- boot --------------------------------------------------------------
+  // --- mode + boot ---------------------------------------------------------
+
+  function setMode(m) {
+    mode = m;
+    try { localStorage.setItem("suburble-mode", m); } catch (e) { /* ok */ }
+    $("mode-normal").setAttribute("aria-selected", String(m === "normal"));
+    $("mode-hard").setAttribute("aria-selected", String(m === "hard"));
+    startDay();
+  }
+
+  function startDay() {
+    var day = dayNumber();
+    state = loadState(day);
+    state.answerIdx = todaysAnswer(mode, day);
+    answer = data.suburbs[state.answerIdx];
+
+    $("day-no").textContent = "#" + (day + 1);
+    $("result").hidden = true;
+    $("stats").hidden = true;
+    $("guess-form").hidden = false;
+    renderSilhouette(answer, state.done);
+    renderGuesses();
+    if (state.done) showResult(state.won ? "Solved!" : "Next time!");
+  }
 
   fetch("data/suburbs.json").then(function (r) { return r.json(); }).then(function (d) {
     data = d;
-    var day = dayNumber();
-    state = loadState(day);
-
-    // answers exclude administrative oddities; everything stays guessable
-    eligible = [];
-    d.suburbs.forEach(function (s, i) {
-      if (s.name.indexOf("CAPE FARMS") !== 0) eligible.push(i);
-    });
-    var order = shuffled(eligible.length, 0x5b3b1e);
-    state.answerIdx = eligible[order[day % eligible.length]];
-    answer = d.suburbs[state.answerIdx];
-
-    $("day-no").textContent = "#" + (day + 1);
-    renderSilhouette(answer, state.done);
-    renderGuesses();
+    try { mode = localStorage.getItem("suburble-mode") === "hard" ? "hard" : "normal"; } catch (e) { /* default */ }
     wireInput();
-
-    if (state.done) finishRestore();
-
+    $("mode-normal").addEventListener("click", function () { setMode("normal"); });
+    $("mode-hard").addEventListener("click", function () { setMode("hard"); });
     $("share").addEventListener("click", function () {
       navigator.clipboard.writeText(shareText()).then(function () {
         $("share").textContent = "copied!";
         setTimeout(function () { $("share").textContent = "share"; }, 1500);
       });
     });
+    setMode(mode);
   }).catch(function (err) {
     $("guesses").textContent = "could not load suburb data — " + err;
   });
-
-  function finishRestore() {
-    $("guess-form").hidden = true;
-    renderSilhouette(answer, true);
-    var res = $("result");
-    res.hidden = false;
-    $("result-name").textContent = displayName(answer.name);
-    $("result-meta").textContent = answer.km2 + " km² · puzzle #" + (state.day + 1);
-    $("result-verdict").textContent = state.won ? "Solved!" : "Next time!";
-    renderStats();
-  }
 })();

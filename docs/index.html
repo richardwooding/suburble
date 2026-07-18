@@ -113,6 +113,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="gl-wrap" style="max-width:860px">
     <p class="gl-eyebrow">daily puzzle · cape town · open data</p>
     <h1 style="margin-bottom:0">Which suburb is <span class="gl-grad">this?</span></h1>
+    <div class="gl-badges" role="tablist" aria-label="Difficulty" style="margin-top:14px">
+      <button class="gl-lang" role="tab" id="mode-normal" data-gl-tab aria-selected="true">normal · 113 well-known</button>
+      <button class="gl-lang" role="tab" id="mode-hard" data-gl-tab aria-selected="false">hard · all 778</button>
+    </div>
 
     <div class="game-grid">
       <div class="shape-panel">
@@ -125,6 +129,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                  role="combobox" aria-expanded="false" aria-controls="suggestions">
           <ul id="suggestions" hidden role="listbox"></ul>
         </form>
+        <p class="gl-hint" id="hint" hidden style="margin-top:10px" aria-live="polite"></p>
         <div id="result" hidden>
           <div id="result-name"></div>
           <div id="result-meta"></div>
@@ -150,7 +155,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="gl-wrap" style="max-width:860px">
     <p class="gl-eyebrow">how to play</p>
     <h2>Six guesses. One suburb.</h2>
-    <p class="gl-lede">Every day at midnight (SAST) a new Cape Town suburb silhouette appears — one of 778 official suburbs from the City's open data. Each wrong guess tells you how far away you are, which direction to look (the arrow points from your guess toward the answer), and how warm you're getting. Solve it and share your grid.</p>
+    <p class="gl-lede">Every day at midnight (SAST) a new Cape Town suburb silhouette appears. Each wrong guess tells you how far away you are, which direction to look (the arrow points from your guess toward the answer), and how warm you're getting. After three misses you get the suburb's area; after four, its first letter. Solve it and share your grid.</p>
+    <p class="gl-lede" style="margin-top:12px"><strong>Normal</strong> draws answers from 113 well-known suburbs; <strong>hard</strong> draws from all 778 official planning suburbs — extensions, industrial areas, and every obscure corner of the metro. Any suburb is a valid guess in either mode, and each mode keeps its own streak.</p>
     <p class="gl-hint" style="margin-top:14px">Data: <a href="https://odp-cctegis.opendata.arcgis.com/">City of Cape Town Open Data Portal</a> (Official Planning Suburbs). Distances are between suburb centroids.</p>
   </div>
 </section>

@@ -9,6 +9,13 @@ far off you are, which direction to look, and how warm you're getting.
 A new puzzle appears at midnight SAST. Solve it, share your emoji grid,
 defend your streak.
 
+**Normal mode** draws answers from a curated pool of 113 well-known suburbs
+(the full 778 stay guessable); **hard mode** draws from everything — the
+official layer subdivides famously (BELHAR EXT 1–14, DELFT 3…), so hard
+mode is genuinely brutal. Hints unlock after the 3rd miss (area) and 4th
+miss (first letter). The curated list lives in `cmd/gen/curated.go` and is
+verified against the dataset at generation time.
+
 ## How it works
 
 - `cmd/gen` fetches the *Official Planning Suburbs* layer from the

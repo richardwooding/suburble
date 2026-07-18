@@ -39,7 +39,8 @@ type Suburb struct {
 	Name   string         `json:"name"`
 	Center [2]float64     `json:"c"` // lon, lat
 	AreaKm float64        `json:"km2"`
-	Rings  [][][2]float64 `json:"rings"` // normalized to frameSize x frameSize
+	Known  bool           `json:"known,omitempty"` // in the curated normal-mode answer pool
+	Rings  [][][2]float64 `json:"rings"`           // normalized to frameSize x frameSize
 }
 
 type dataset struct {
@@ -91,6 +92,11 @@ func run() error {
 		byName[name] = append(byName[name], rings...)
 	}
 
+	known := map[string]bool{}
+	for _, n := range curated {
+		known[n] = true
+	}
+
 	var suburbs []Suburb
 	for name, rings := range byName {
 		s, ok := buildSuburb(name, rings)
@@ -98,9 +104,23 @@ func run() error {
 			fmt.Fprintf(os.Stderr, "skipping %s: degenerate geometry\n", name)
 			continue
 		}
+		if known[name] {
+			s.Known = true
+			delete(known, name)
+		}
 		suburbs = append(suburbs, s)
 	}
 	sort.Slice(suburbs, func(i, j int) bool { return suburbs[i].Name < suburbs[j].Name })
+
+	// Every curated name must exist in the dataset — fail loudly on drift.
+	if len(known) > 0 {
+		var missing []string
+		for n := range known {
+			missing = append(missing, n)
+		}
+		sort.Strings(missing)
+		return fmt.Errorf("curated names not in dataset: %s", strings.Join(missing, ", "))
+	}
 
 	out := dataset{
 		Generated: time.Now().UTC().Format(time.RFC3339),
