@@ -229,10 +229,29 @@
 
   // --- autocomplete ------------------------------------------------------
 
+  // ALIASES maps official dataset names to the spellings people actually
+  // use, so typing "Bloubergstrand" finds BLAAUWBERGSTRAND. Matching only;
+  // the official name is always what's displayed.
+  var ALIASES = {
+    "BLAAUWBERGSTRAND": ["BLOUBERGSTRAND", "BLOUBERG STRAND"],
+    "CAMPS BAY / BAKOVEN": ["CAMPS BAY", "BAKOVEN"],
+    "GUGULETU": ["GUGULETHU"],
+    "EERSTERIVIER": ["EERSTE RIVER"],
+    "MELKBOSCH STRAND": ["MELKBOSSTRAND"],
+    "GORDONS BAY": ["GORDON'S BAY"],
+    "SIMON'S TOWN": ["SIMONS TOWN", "SIMONSTOWN"],
+    "BO-KAAP": ["SCHOTSCHE KLOOF", "BOKAAP"],
+    "MITCHELLS PLAIN CBD": ["MITCHELLS PLAIN"],
+    "KUILSRIVIER SOUTH SMALLHOLDINGS": ["KUILS RIVER"],
+    "ST JAMES": ["SAINT JAMES"]
+  };
+
   function wireInput() {
     var input = $("guess-input");
     var list = $("suggestions");
-    var names = data.suburbs.map(function (s, i) { return { i: i, d: displayName(s.name), u: s.name }; });
+    var names = data.suburbs.map(function (s, i) {
+      return { i: i, d: displayName(s.name), u: s.name, a: ALIASES[s.name] || [] };
+    });
     var active = -1, shown = [];
 
     function hide() { list.hidden = true; active = -1; }
@@ -242,9 +261,17 @@
       if (!needle) { hide(); return; }
       var guessed = {};
       state.guesses.forEach(function (g) { guessed[g.idx] = true; });
-      shown = names.filter(function (n) { return !guessed[n.i] && n.u.indexOf(needle) >= 0; }).slice(0, 8);
+      var matches = function (n) {
+        if (n.u.indexOf(needle) >= 0) return true;
+        return n.a.some(function (al) { return al.indexOf(needle) >= 0; });
+      };
+      var starts = function (n) {
+        if (n.u.indexOf(needle) === 0) return true;
+        return n.a.some(function (al) { return al.indexOf(needle) === 0; });
+      };
+      shown = names.filter(function (n) { return !guessed[n.i] && matches(n); }).slice(0, 8);
       shown.sort(function (a, b) {
-        var as = a.u.indexOf(needle) === 0 ? 0 : 1, bs = b.u.indexOf(needle) === 0 ? 0 : 1;
+        var as = starts(a) ? 0 : 1, bs = starts(b) ? 0 : 1;
         return as - bs || a.u.localeCompare(b.u);
       });
       list.innerHTML = "";
