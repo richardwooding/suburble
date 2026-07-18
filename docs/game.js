@@ -4,7 +4,7 @@
 
   var MAX_GUESSES = 6;
   var MAX_KM = 80; // metro span used for proximity scaling
-  var EPOCH = "2026-07-18"; // puzzle #1
+  var EPOCH = "2026-07-17"; // launch day = puzzle #1
   var TZ = "Africa/Johannesburg";
 
   var state = { day: 0, guesses: [], done: false, won: false };
