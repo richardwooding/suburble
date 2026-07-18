@@ -24,7 +24,11 @@ const (
 	layerID   = 3
 	nameField = "OFC_SBRB_NAME"
 
-	simplifyTolDeg = 0.0004 // ~40m — silhouettes, not surveys
+	// Simplification tolerance is RELATIVE to each suburb's extent — an
+	// absolute tolerance flattens small suburbs into blobs while barely
+	// touching big ones (Wellway Park went from 63 boundary points to 6).
+	simplifyRelTol = 0.008   // 0.8% of the suburb's larger span
+	simplifyMinDeg = 0.00001 // ~1m floor
 	frameSize      = 100.0
 	maxRings       = 4    // keep at most this many rings per suburb
 	minRingShare   = 0.02 // drop rings under 2% of the suburb's area
@@ -193,12 +197,23 @@ func buildSuburb(name string, rings [][]geom.Point) (Suburb, bool) {
 	}
 	sort.Slice(rs, func(i, j int) bool { return rs[i].area > rs[j].area })
 
+	// Tolerance scales with the suburb's own bounding box.
+	minX, minY := math.Inf(1), math.Inf(1)
+	maxX, maxY := math.Inf(-1), math.Inf(-1)
+	for _, r := range rs {
+		for _, p := range r.ring {
+			minX, maxX = math.Min(minX, p.X), math.Max(maxX, p.X)
+			minY, maxY = math.Min(minY, p.Y), math.Max(maxY, p.Y)
+		}
+	}
+	tol := math.Max(simplifyMinDeg, math.Max(maxX-minX, maxY-minY)*simplifyRelTol)
+
 	var kept [][]geom.Point
 	for _, r := range rs {
 		if len(kept) >= maxRings || r.area/total < minRingShare {
 			break
 		}
-		kept = append(kept, geom.Simplify(r.ring, simplifyTolDeg))
+		kept = append(kept, geom.Simplify(r.ring, tol))
 	}
 
 	center := geom.Centroid(rs[0].ring)
