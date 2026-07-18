@@ -92,6 +92,36 @@ func run() error {
 		byName[name] = append(byName[name], rings...)
 	}
 
+	// Assemble merged colloquial suburbs from their official members. The
+	// members stay in the dataset; the merged entry is added alongside.
+	mergedNames := map[string]bool{}
+	for _, m := range merges {
+		var rings [][]geom.Point
+		var members []string
+		for name, rs := range byName {
+			if mergedNames[name] {
+				continue
+			}
+			match := m.Prefix != "" && strings.HasPrefix(name, m.Prefix)
+			for _, mem := range m.Members {
+				if name == mem {
+					match = true
+				}
+			}
+			if match {
+				rings = append(rings, rs...)
+				members = append(members, name)
+			}
+		}
+		if len(members) < 2 {
+			return fmt.Errorf("merge %s matched %d members, want >= 2", m.Name, len(members))
+		}
+		byName[m.Name] = rings
+		mergedNames[m.Name] = true
+		sort.Strings(members)
+		fmt.Fprintf(os.Stderr, "merged %s <= %s\n", m.Name, strings.Join(members, ", "))
+	}
+
 	known := map[string]bool{}
 	for _, n := range curated {
 		known[n] = true
@@ -99,7 +129,7 @@ func run() error {
 
 	var suburbs []Suburb
 	for name, rings := range byName {
-		s, ok := buildSuburb(name, rings)
+		s, ok := buildSuburb(name, rings, mergedNames[name])
 		if !ok {
 			fmt.Fprintf(os.Stderr, "skipping %s: degenerate geometry\n", name)
 			continue
@@ -196,7 +226,14 @@ func parseRings(raw json.RawMessage) ([][]geom.Point, error) {
 	}
 }
 
-func buildSuburb(name string, rings [][]geom.Point) (Suburb, bool) {
+func buildSuburb(name string, rings [][]geom.Point, merged bool) (Suburb, bool) {
+	// Merged colloquial suburbs are made of many similar-sized parts, so
+	// they get looser ring caps than single official suburbs.
+	ringCap, ringShare := maxRings, minRingShare
+	if merged {
+		ringCap, ringShare = 24, 0.003
+	}
+
 	// Rank rings by area, keep the biggest few, drop slivers.
 	type ranked struct {
 		ring []geom.Point
@@ -217,26 +254,37 @@ func buildSuburb(name string, rings [][]geom.Point) (Suburb, bool) {
 	}
 	sort.Slice(rs, func(i, j int) bool { return rs[i].area > rs[j].area })
 
-	// Tolerance scales with the suburb's own bounding box.
-	minX, minY := math.Inf(1), math.Inf(1)
-	maxX, maxY := math.Inf(-1), math.Inf(-1)
-	for _, r := range rs {
-		for _, p := range r.ring {
+	// Tolerance scales with each RING's own bounding box — scaling by the
+	// whole suburb's box would crush the small members of merged suburbs
+	// back into blobs.
+	ringTol := func(r []geom.Point) float64 {
+		minX, minY := math.Inf(1), math.Inf(1)
+		maxX, maxY := math.Inf(-1), math.Inf(-1)
+		for _, p := range r {
 			minX, maxX = math.Min(minX, p.X), math.Max(maxX, p.X)
 			minY, maxY = math.Min(minY, p.Y), math.Max(maxY, p.Y)
 		}
+		return math.Max(simplifyMinDeg, math.Max(maxX-minX, maxY-minY)*simplifyRelTol)
 	}
-	tol := math.Max(simplifyMinDeg, math.Max(maxX-minX, maxY-minY)*simplifyRelTol)
 
 	var kept [][]geom.Point
 	for _, r := range rs {
-		if len(kept) >= maxRings || r.area/total < minRingShare {
+		if len(kept) >= ringCap || r.area/total < ringShare {
 			break
 		}
-		kept = append(kept, geom.Simplify(r.ring, tol))
+		kept = append(kept, geom.Simplify(r.ring, ringTol(r.ring)))
 	}
 
-	center := geom.Centroid(rs[0].ring)
+	// Area-weighted centroid across every ring — a merged suburb's centre
+	// must not collapse to its largest fragment.
+	var center geom.Point
+	for _, r := range rs {
+		c := geom.Centroid(r.ring)
+		center.X += c.X * r.area
+		center.Y += c.Y * r.area
+	}
+	center.X /= total
+	center.Y /= total
 	norm := geom.Normalize(kept, frameSize, frameSize)
 
 	out := make([][][2]float64, len(norm))

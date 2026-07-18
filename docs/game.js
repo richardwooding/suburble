@@ -233,7 +233,6 @@
   // use, so typing "Bloubergstrand" finds BLAAUWBERGSTRAND. Matching only;
   // the official name is always what's displayed.
   var ALIASES = {
-    "BLAAUWBERGSTRAND": ["BLOUBERGSTRAND", "BLOUBERG STRAND"],
     "CAMPS BAY / BAKOVEN": ["CAMPS BAY", "BAKOVEN"],
     "GUGULETU": ["GUGULETHU"],
     "EERSTERIVIER": ["EERSTE RIVER"],
@@ -241,8 +240,6 @@
     "GORDONS BAY": ["GORDON'S BAY"],
     "SIMON'S TOWN": ["SIMONS TOWN", "SIMONSTOWN"],
     "BO-KAAP": ["SCHOTSCHE KLOOF", "BOKAAP"],
-    "MITCHELLS PLAIN CBD": ["MITCHELLS PLAIN"],
-    "KUILSRIVIER SOUTH SMALLHOLDINGS": ["KUILS RIVER"],
     "ST JAMES": ["SAINT JAMES"]
   };
 
@@ -352,6 +349,8 @@
   fetch("data/suburbs.json").then(function (r) { return r.json(); }).then(function (d) {
     data = d;
     try { mode = localStorage.getItem("suburble-mode") === "hard" ? "hard" : "normal"; } catch (e) { /* default */ }
+    $("mode-normal").textContent = "normal · " + answerPool("normal").length + " well-known";
+    $("mode-hard").textContent = "hard · all " + answerPool("hard").length;
     wireInput();
     $("mode-normal").addEventListener("click", function () { setMode("normal"); });
     $("mode-hard").addEventListener("click", function () { setMode("hard"); });
