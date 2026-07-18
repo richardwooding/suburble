@@ -1,8 +1,15 @@
-# suburble
+# Cape Town Suburble
 
 The daily Cape Town suburb puzzle. Guess which of the city's **778 official
 suburbs** matches the silhouette — six guesses, and every miss tells you how
 far off you are, which direction to look, and how warm you're getting.
+
+Part of the -dle family tree: [Wordle](https://www.nytimes.com/games/wordle/)
+invented the daily share-grid, [Worldle](https://worldle.teuteuf.fr/) brought
+it to map silhouettes, and [Canberra Suburble](https://www.suburble.au/) plays
+the same suburb-guessing game for Australia's capital (and got to the name
+first — this is the Cape Town edition, built independently and credited
+gladly).
 
 **▶ Play: https://richardwooding.github.io/suburble/**
 

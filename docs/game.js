@@ -219,7 +219,7 @@
 
   function shareText() {
     var tag = mode === "hard" ? " (hard)" : "";
-    var lines = ["Suburble #" + (state.day + 1) + tag + " " + (state.won ? state.guesses.length : "X") + "/" + MAX_GUESSES];
+    var lines = ["Cape Town Suburble #" + (state.day + 1) + tag + " " + (state.won ? state.guesses.length : "X") + "/" + MAX_GUESSES];
     state.guesses.forEach(function (g) {
       lines.push(proximitySquares(g.km) + (g.idx === state.answerIdx ? "🎯" : g.arrow));
     });
